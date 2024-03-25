@@ -10,7 +10,7 @@ because OpenAI banned my account due to "accessing the API from an [unsupported 
 
 The frontend implementation can be found in [mthli/better-youtube-summary-extension](https://github.com/mthli/better-youtube-summary-extension).
 
-If you want to deploy it yourself, please replace the `bys.mthli.com` with your own domain.
+If you want to deploy it yourself, please replace the `youtube.magicboxpremium.com` with your own domain.
 
 ## Development
 
@@ -89,8 +89,8 @@ pipenv install --dev
 Before run this project:
 
 - Set `openai_api_key` defined in `./rds.py` with `redis-cli`
-- Put `./bys.mthli.com.conf` to `/etc/nginx/conf.d/` directory
-- Execute `sudo certbot --nginx -d bys.mthli.com` to generate certificates, or
+- Put `./youtube.magicboxpremium.com.conf` to `/etc/nginx/conf.d/` directory
+- Execute `sudo certbot --nginx -d youtube.magicboxpremium.com` to generate certificates, or
 - Execute `sudo certbot renew` to avoid certificates expired after 90 days
 
 Then just execute commands as follow:
