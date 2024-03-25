@@ -149,7 +149,8 @@ async def summarize(vid: str):
 
     found = find_chapters_by_vid(vid)
     if found:
-        if (chapters and found[0].slicer != ChapterSlicer.YOUTUBE) or \
+        # TODO remove `True` and return `video_summary` in the `else` part
+        if True or (chapters and found[0].slicer != ChapterSlicer.YOUTUBE) or \
                 need_to_resummarize(vid, found):
             logger.info(f'summarize, need to resummarize, vid={vid}')
             delete_chapters_by_vid(vid)
@@ -160,6 +161,7 @@ async def summarize(vid: str):
         else:
             logger.info(f'summarize, found chapters in database, vid={vid}')
             await do_if_found_chapters_in_database(vid, found)
+            # TODO `video_summary`
             return build_summary_response(State.DONE, found)
 
     if rds.exists(no_transcript_rds_key) or no_transcript:
@@ -312,6 +314,8 @@ async def do_summarize_job(
     summarizing_rds_key = build_summarizing_rds_key(vid)
     rds.set(summarizing_rds_key, 1, ex=SUMMARIZING_RDS_KEY_EX)
 
+    # TODO return `video_summary` from `summarizing` and handle it.
+    # Add to DB or whatever.
     chapters, _ = await summarizing(
         vid=vid,
         trigger=trigger,

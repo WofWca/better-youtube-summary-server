@@ -26,6 +26,7 @@ from prompt import \
     GENERATE_MULTI_CHAPTERS_TOKEN_LIMIT_FOR_16K, \
     GENERATE_ONE_CHAPTER_SYSTEM_PROMPT, \
     GENERATE_ONE_CHAPTER_TOKEN_LIMIT, \
+    SUMMARIZE_CHAPTER_SUMMARIES_PROMPT, \
     SUMMARIZE_FIRST_CHAPTER_SYSTEM_PROMPT, \
     SUMMARIZE_FIRST_CHAPTER_TOKEN_LIMIT, \
     SUMMARIZE_NEXT_CHAPTER_SYSTEM_PROMPT, \
@@ -43,11 +44,16 @@ def build_summary_channel(vid: str) -> str:
     return f'summary_{vid}'
 
 
-def build_summary_response(state: State, chapters: list[Chapter] = []) -> dict:
+def build_summary_response(
+    state: State,
+    chapters: list[Chapter] = [],
+    video_summary: str = ''
+) -> dict:
     chapters = list(map(lambda c: asdict(c), chapters))
     return {
         'state': state.value,
         'chapters': chapters,
+        'video_summary': video_summary
     }
 
 
@@ -63,6 +69,8 @@ async def do_if_found_chapters_in_database(vid: str, chapters: list[Chapter]):
     rds.delete(build_no_transcript_rds_key(vid))
     rds.delete(build_summarizing_rds_key(vid))
     channel = build_summary_channel(vid)
+    # TODO return `video_summary`. Though now the usage of this function is
+    # commented-out
     data = build_summary_response(State.DONE, chapters)
     await sse_publish(channel=channel, event=SseEvent.SUMMARY, data=data)
     await sse_publish(channel=channel, event=SseEvent.CLOSE)
@@ -169,7 +177,11 @@ async def summarize(
             openai_api_key=openai_api_key,
         )
         if chapters:
-            await _do_before_return(vid, chapters)
+            video_summary = await _summarize_chapter_summaries(
+                chapters=chapters,
+                openai_api_key=openai_api_key,
+            )
+            await _do_before_return(vid, chapters, video_summary)
             return chapters, has_exception
 
         # Just use the "outline" field if it can be generated in 16k.
@@ -222,7 +234,14 @@ async def summarize(
             logger.error(f'summarize, but has exception, vid={vid}, e={r}')
             has_exception = True
 
-    await _do_before_return(vid, chapters)
+    # TODO handle `has_exception`? IDK what it does.
+    video_summary = await _summarize_chapter_summaries(
+        chapters=chapters,
+        openai_api_key=openai_api_key,
+    )
+
+    await _do_before_return(vid, chapters, video_summary)
+    # TODO return `video_summary`
     return chapters, has_exception
 
 
@@ -570,9 +589,36 @@ async def _summarize_chapter(
         data=build_summary_response(State.DOING, [chapter]),
     )
 
+async def _summarize_chapter_summaries(
+    chapters: list[Chapter],
+    # TODO need to use `lang`?
+    # lang: str,
+    openai_api_key: str = '',
+):
+    system_message = build_message(Role.SYSTEM, SUMMARIZE_CHAPTER_SUMMARIES_PROMPT)
+    # TODO can mashing chapters together like this into a single prompt
+    # make separation between them unclear to the assistant?
+    chapter_strings = [f"## {c.chapter}\n\n {c.summary}" for c in chapters]
+    user_message = build_message(Role.USER, "\n\n".join(chapter_strings))
+    # TODO handle token limit, though the chapter summary should be
+    # well within it.
+    body = await chat(
+        messages=[system_message, user_message],
+        model=Model.GPT_3_5_TURBO,
+        # TODO I just copy-pasted this from the rest of the code
+        # https://platform.openai.com/docs/api-reference/chat/create#chat-create-top_p
+        top_p=0.1,
+        timeout=90,
+        api_key=openai_api_key,
+    )
+    summary = get_content(body).strip()
+    logger.info(f"got video summary. len: {len(summary)}")
+    # TODO sse_publish ? What does it do?
+    return summary
 
-async def _do_before_return(vid: str, chapters: list[Chapter]):
+
+async def _do_before_return(vid: str, chapters: list[Chapter], video_summary: str):
     channel = build_summary_channel(vid)
-    data = build_summary_response(State.DONE, chapters)
+    data = build_summary_response(State.DONE, chapters, video_summary)
     await sse_publish(channel=channel, event=SseEvent.SUMMARY, data=data)
     await sse_publish(channel=channel, event=SseEvent.CLOSE)

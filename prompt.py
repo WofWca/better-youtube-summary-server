@@ -210,6 +210,17 @@ Do not output any redundant or irrelevant points.
 Do not output any redundant explanation or information.
 '''
 
+# TODO do we even need to specify that the summary is split by chapter?
+# we can just output their summaries in sequence and yeah.
+SUMMARIZE_CHAPTER_SUMMARIES_PROMPT = '''
+You will be provided with a summary of a video split by chapter.
+Your task is to summarize the entire video.
+It is preferable to provide the summary in the form of 5 key points.
+The summary is to act as a TL;DR and not a "student's note", i.e. it must be useful to someone who has not and will not watch the video.
+Be concise.
+Do not output any redundant explanation.
+'''
+
 
 def generate_multi_chapters_example_messages_for_4k(lang: str) -> list[Message]:
     system_prompt = _GENERATE_MULTI_CHAPTERS_SYSTEM_PROMPT.format(lang=lang)
