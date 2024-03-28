@@ -65,13 +65,15 @@ def build_no_transcript_rds_key(vid: str) -> str:
     return f'no_transcript_{vid}'
 
 
-async def do_if_found_chapters_in_database(vid: str, chapters: list[Chapter]):
+async def do_if_found_chapters_in_database(
+    vid: str,
+    chapters: list[Chapter],
+    video_summary: str
+):
     rds.delete(build_no_transcript_rds_key(vid))
     rds.delete(build_summarizing_rds_key(vid))
     channel = build_summary_channel(vid)
-    # TODO return `video_summary`. Though now the usage of this function is
-    # commented-out
-    data = build_summary_response(State.DONE, chapters)
+    data = build_summary_response(State.DONE, chapters, video_summary)
     await sse_publish(channel=channel, event=SseEvent.SUMMARY, data=data)
     await sse_publish(channel=channel, event=SseEvent.CLOSE)
 
@@ -150,7 +152,7 @@ async def summarize(
     timed_texts: list[TimedText],
     lang: str,
     openai_api_key: str = '',
-) -> tuple[list[Chapter], bool]:
+) -> tuple[list[Chapter], str, bool]:
     logger.info(
         f'summarize, '
         f'vid={vid}, '
@@ -183,7 +185,7 @@ async def summarize(
                 openai_api_key=openai_api_key,
             )
             await _do_before_return(vid, chapters, video_summary)
-            return chapters, has_exception
+            return chapters, video_summary, has_exception
 
         # Just use the "outline" field if it can be generated in 16k.
         chapters = await _generate_multi_chapters(
@@ -243,8 +245,7 @@ async def summarize(
     )
 
     await _do_before_return(vid, chapters, video_summary)
-    # TODO return `video_summary`
-    return chapters, has_exception
+    return chapters, video_summary, has_exception
 
 
 def _parse_chapters(

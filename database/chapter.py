@@ -1,7 +1,10 @@
 from sys import maxsize
 from typing import Optional
 
-from database.data import Chapter
+from database.data import \
+    Chapter, \
+    ChapterSlicer, \
+    ChapterStyle
 from database.sqlite import commit, fetchall, sqlescape
 
 _TABLE = 'chapter'
@@ -91,6 +94,11 @@ def find_chapter_by_cid(cid: str) -> Optional[Chapter]:
 
 
 def find_chapters_by_vid(vid: str, limit: int = maxsize) -> list[Chapter]:
+    # Just ensure that there is no way for users to list all the videos we have
+    # in the database. Such usage is not required for our extension to function.
+    if vid == 'stub_vid':
+        return []
+    
     res = fetchall(f'''
         SELECT
               {_COLUMN_CID},
@@ -164,3 +172,51 @@ def delete_chapters_by_vid(vid: str):
         DELETE FROM {_TABLE}
         WHERE {_COLUMN_VID} = '{sqlescape(vid)}'
         ''')
+
+
+def insert_complete_video_summary(
+    vid: str,
+    video_summary: str,
+    lang: str,
+    trigger: str,
+):
+    # A bit of a hack. Let's represent the complete video summary
+    # as a "Chapter".
+    # TODO refactor: do this properly?
+    video_summary_chapter = Chapter(
+        cid=get_complete_video_summary_cid(vid),
+        summary = video_summary,
+        # Make sure not to use the same `vid` as for actual chapters,
+        # because otherwise it will look like a regular chapter to the rest
+        # of the app, e.g. it would return it from `find_chapters_by_vid`
+        vid='stub_vid',
+        trigger=trigger,
+        # TODO not sure if this is correct
+        style=ChapterStyle.MARKDOWN.value,
+        lang=lang,
+        # The below ones are just stubs, they don't make sense for
+        # a "video_summary".
+        slicer=ChapterSlicer.OPENAI.value,
+        start=0,
+        chapter="",
+    )
+    _insert_chapter(video_summary_chapter)
+
+
+def find_complete_video_summary(vid: str) -> str:
+    res = find_chapter_by_cid(get_complete_video_summary_cid(vid))
+    if res is None:
+        return None
+    return res.summary
+
+
+def delete_complete_video_summary(vid: str):
+    cid = get_complete_video_summary_cid(vid)
+    commit(f'''
+        DELETE FROM {_TABLE}
+        WHERE {_COLUMN_CID} = '{sqlescape(cid)}'
+        ''')
+
+
+def get_complete_video_summary_cid(vid: str):
+    return f'{vid}_video_summary'

@@ -14,8 +14,11 @@ from youtube_transcript_api import NoTranscriptFound, TranscriptsDisabled
 from constants import APPLICATION_JSON
 from database.chapter import \
     create_chapter_table, \
+    delete_complete_video_summary, \
     find_chapters_by_vid, \
+    find_complete_video_summary, \
     insert_chapters, \
+    insert_complete_video_summary, \
     delete_chapters_by_vid
 from database.data import \
     ChapterSlicer, \
@@ -149,20 +152,33 @@ async def summarize(vid: str):
 
     found = find_chapters_by_vid(vid)
     if found:
-        # TODO remove `True` and return `video_summary` in the `else` part
-        if True or (chapters and found[0].slicer != ChapterSlicer.YOUTUBE) or \
-                need_to_resummarize(vid, found):
+        # The fact that chapter summaries exist in the DB currently means
+        # that the complete video summary also exists, because we write
+        # them to the DB at the same time. See `do_summarize_job`.
+        # _Unless_ the summary was made on a previous version of the
+        # server where it didn't yet write the complete video summary to DB.
+        video_summary = find_complete_video_summary(vid)
+        # TODO maybe just generate a summary right here instead of re-doing
+        # the whole thing.
+        # Because this practially invalidates all previous database records.
+        resummarize_because_complete_video_summary_empty = video_summary is None
+        if resummarize_because_complete_video_summary_empty:
+            logger.warn("Found chapters but didn't find complete video summary. Forcing resummarization.")
+
+        if (chapters and found[0].slicer != ChapterSlicer.YOUTUBE) or \
+                need_to_resummarize(vid, found) or \
+                resummarize_because_complete_video_summary_empty:
             logger.info(f'summarize, need to resummarize, vid={vid}')
             delete_chapters_by_vid(vid)
+            delete_complete_video_summary(vid)
             delete_feedback(vid)
             delete_translation(vid)
             rds.delete(no_transcript_rds_key)
             rds.delete(summarizing_rds_key)
         else:
             logger.info(f'summarize, found chapters in database, vid={vid}')
-            await do_if_found_chapters_in_database(vid, found)
-            # TODO `video_summary`
-            return build_summary_response(State.DONE, found)
+            await do_if_found_chapters_in_database(vid, found, video_summary)
+            return build_summary_response(State.DONE, found, video_summary)
 
     if rds.exists(no_transcript_rds_key) or no_transcript:
         logger.info(f'summarize, but no transcript for now, vid={vid}')
@@ -314,9 +330,7 @@ async def do_summarize_job(
     summarizing_rds_key = build_summarizing_rds_key(vid)
     rds.set(summarizing_rds_key, 1, ex=SUMMARIZING_RDS_KEY_EX)
 
-    # TODO return `video_summary` from `summarizing` and handle it.
-    # Add to DB or whatever.
-    chapters, _ = await summarizing(
+    chapters, video_summary, _ = await summarizing(
         vid=vid,
         trigger=trigger,
         chapters=chapters,
@@ -328,9 +342,11 @@ async def do_summarize_job(
     if chapters:
         logger.info(f'summarize, save chapters to database, vid={vid}')
         delete_chapters_by_vid(vid)
+        delete_complete_video_summary(vid)
         delete_feedback(vid)
         delete_translation(vid)
         insert_chapters(chapters)
+        insert_complete_video_summary(vid, video_summary, lang, trigger)
 
     rds.delete(build_no_transcript_rds_key(vid))
     rds.delete(summarizing_rds_key)
