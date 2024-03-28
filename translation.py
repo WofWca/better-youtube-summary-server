@@ -5,7 +5,9 @@ from typing import Optional
 from langcodes import Language
 from quart import abort
 
-from database.chapter import find_chapter_by_cid
+from database.chapter import \
+    find_chapter_by_cid, \
+    get_complete_video_summary_cid
 from database.data import Translation
 from database.translation import \
     find_translation, \
@@ -40,6 +42,15 @@ async def translate(
     lang: str,
     openai_api_key: str = '',
 ) -> Optional[Translation]:
+    # A bit hacky if you ask me.
+    if cid == 'video_summary':
+        cid = get_complete_video_summary_cid(vid)
+        # TODO maybe also vid = 'stub_vid'?
+        # Probably nah, because see `delete_translation`, it deletes all
+        # translations of a video.
+        # And in general, this is not required as it is with
+        # `insert_complete_video_summary` and `find_chapters_by_vid`.
+
     chapter = find_chapter_by_cid(cid)
     if not chapter:
         abort(404, f'translate, but chapter not found, vid={vid}, cid={cid}')  # nopep8.
