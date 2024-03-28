@@ -179,6 +179,7 @@ async def summarize(
         if chapters:
             video_summary = await _summarize_chapter_summaries(
                 chapters=chapters,
+                lang=lang,
                 openai_api_key=openai_api_key,
             )
             await _do_before_return(vid, chapters, video_summary)
@@ -237,6 +238,7 @@ async def summarize(
     # TODO handle `has_exception`? IDK what it does.
     video_summary = await _summarize_chapter_summaries(
         chapters=chapters,
+        lang=lang,
         openai_api_key=openai_api_key,
     )
 
@@ -591,11 +593,13 @@ async def _summarize_chapter(
 
 async def _summarize_chapter_summaries(
     chapters: list[Chapter],
-    # TODO need to use `lang`?
-    # lang: str,
+    lang: str,
     openai_api_key: str = '',
 ):
-    system_message = build_message(Role.SYSTEM, SUMMARIZE_CHAPTER_SUMMARIES_PROMPT)
+    system_message = build_message(
+        Role.SYSTEM,
+        SUMMARIZE_CHAPTER_SUMMARIES_PROMPT.format(lang=lang)
+    )
     # TODO can mashing chapters together like this into a single prompt
     # make separation between them unclear to the assistant?
     chapter_strings = [f"## {c.chapter}\n\n {c.summary}" for c in chapters]

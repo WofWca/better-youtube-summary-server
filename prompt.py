@@ -218,8 +218,10 @@ Your task is to summarize the entire video.
 It is preferable to provide the summary in the form of 5 key points.
 The summary is to act as a TL;DR and not a "student's note", i.e. it must be useful to someone who has not and will not watch the video.
 Be concise.
+The output language must be "{lang}" in ISO 639-1.
 Do not output any redundant explanation.
 '''
+# TODO so, is the lang in in "ISO 639-1" or in "BCP 47"?
 
 
 def generate_multi_chapters_example_messages_for_4k(lang: str) -> list[Message]:
