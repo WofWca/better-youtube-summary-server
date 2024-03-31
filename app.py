@@ -231,7 +231,7 @@ async def summarize(vid: str):
 # }
 @app.post('/api/translate/<string:vid>')
 async def translate(vid: str):
-    _ = _parse_uid_from_headers(request.headers)
+    uid = _parse_uid_from_headers(request.headers)
     openai_api_key = _parse_openai_api_key_from_headers(request.headers)
 
     try:
@@ -261,6 +261,7 @@ async def translate(vid: str):
         vid=vid,
         cid=cid,
         lang=lang,
+        trigger=uid,
         openai_api_key=openai_api_key,
     )
 

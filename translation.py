@@ -17,7 +17,8 @@ from openai import Model, Role, \
     build_message, \
     chat, \
     count_tokens, \
-    get_content
+    get_content, \
+    get_usage_stats
 
 _TRANSLATION_SYSTEM_PROMPT = '''
 Given the following JSON object as shown below:
@@ -40,6 +41,7 @@ async def translate(
     vid: str,
     cid: str,
     lang: str,
+    trigger: str,
     openai_api_key: str = '',
 ) -> Optional[Translation]:
     # A bit hacky if you ask me.
@@ -86,7 +88,7 @@ async def translate(
     )
 
     content = get_content(body)
-    logger.info(f'translate, vid={vid}, cid={cid}, lang={lang}, content=\n{content}')  # nopep8.
+    logger.info(f'translate, done, vid={vid}, cid={cid}, lang={lang}, trigger={trigger}, {get_usage_stats(body)}')  # nopep8.
 
     # FIXME (Matthew Lee) prompt output as JSON may not work.
     res: dict = json.loads(content)

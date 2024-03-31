@@ -1,6 +1,7 @@
 import httpx
 import logging
 import tiktoken
+import json
 
 from dataclasses import dataclass, asdict
 from enum import IntEnum, unique
@@ -123,6 +124,7 @@ async def chat(
     client = httpx.AsyncClient(transport=transport)
 
     try:
+        logger.debug('starting OpenAI API request')
         response = await client.post(
             url=_CHAT_API_URL,
             headers=headers,
@@ -132,6 +134,7 @@ async def chat(
         )
     finally:
         await client.aclose()
+    logger.debug(f"OpenAI API request finished. Request:\n{json.dumps(body, indent=4)}\nResponse:\n{json.dumps(response.json(), indent=4)}")
 
     if response.status_code not in range(200, 400):
         abort(response.status_code, response.text)
@@ -142,3 +145,6 @@ async def chat(
 
 def get_content(body: dict) -> str:
     return body['choices'][0]['message']['content']
+
+def get_usage_stats(body: dict) -> str:
+    return json.dumps(body['usage'])

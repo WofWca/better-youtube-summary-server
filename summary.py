@@ -20,7 +20,8 @@ from openai import Model, Role, \
     build_message, \
     chat, \
     count_tokens, \
-    get_content
+    get_content, \
+    get_usage_stats
 from prompt import \
     GENERATE_MULTI_CHAPTERS_TOKEN_LIMIT_FOR_4K, \
     GENERATE_MULTI_CHAPTERS_TOKEN_LIMIT_FOR_16K, \
@@ -341,7 +342,7 @@ async def _generate_multi_chapters(
         )
 
         content = get_content(body)
-        logger.info(f'generate multi chapters, vid={vid}, content=\n{content}')
+        logger.info(f'generate multi chapters, vid={vid}, lang={lang}, trigger={trigger}, {get_usage_stats(body)}')
 
         # FIXME (Matthew Lee) prompt output as JSON may not work (in the end).
         res: list[dict] = json.loads(content)
@@ -441,7 +442,7 @@ async def _generate_chapters_one_by_one(
             )
 
             content = get_content(body)
-            logger.info(f'generate one chapter, vid={vid}, content=\n{content}')  # nopep8.
+            logger.info(f'generate one chapter, vid={vid}, lang={lang} trigger={trigger}, {get_usage_stats(body)}')
 
             # FIXME (Matthew Lee) prompt output as JSON may not work (in the end).
             res: dict = json.loads(content)
@@ -580,6 +581,8 @@ async def _summarize_chapter(
         )
 
         summary = get_content(body).strip()
+        logger.info(f'summarize chapter, vid={vid}, cid={chapter.cid}, lang={lang}, trigger={chapter.trigger}, {get_usage_stats(body)}')
+
         chapter.summary = summary  # cache even not finished.
         refined_count += 1
 
@@ -617,7 +620,8 @@ async def _summarize_chapter_summaries(
         api_key=openai_api_key,
     )
     summary = get_content(body).strip()
-    logger.info(f"got video summary. len: {len(summary)}")
+    # `trigger` is inferred
+    logger.info(f'summarize whole video, vid={chapters[0].vid}, lang={lang}, trigger={chapters[0].trigger}, {get_usage_stats(body)}')
     # TODO sse_publish ? What does it do?
     return summary
 
