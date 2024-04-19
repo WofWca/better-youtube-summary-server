@@ -92,6 +92,33 @@ async def add_user():
     }
 
 
+# TODO privacy / security: it's not ideal to allow unauthenticated users
+# check whether an email has used their trial.
+#
+# {
+#   'email': str, required
+# }
+@app.post('/api/request_trial')
+async def request_trial():
+    try:
+        body: dict = await request.get_json() or {}
+    except Exception as e:
+        abort(400, f'request_trial failed, e={e}')
+    email = body.get('email')
+    if not isinstance(email, str):
+        abort(400, '"email" must be a string')
+    email = email.lower()
+    key = f'trial_already_requested_for_email_{email}'
+    already_used = rds.exists(key)
+    ret = {
+        'granted': not already_used
+    }
+    logger.info(f'trial request, {ret}')
+    seconds_in_month = (30 * 24 * 60 * 60)
+    rds.set(key, 1, ex=seconds_in_month)
+    return ret
+
+
 # {
 #   'vid':   str, required.
 #   'bad':  bool, optional.
