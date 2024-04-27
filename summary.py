@@ -159,38 +159,34 @@ async def summarize(
     )
 
     if not chapters:
-        # Use the "outline" and "information" fields if they can be generated in 4k.
-        chapters = await _generate_multi_chapters(
-            vid=vid,
-            trigger=trigger,
-            timed_texts=timed_texts,
-            lang=lang,
-            model=Model.GPT_3_5_TURBO,
-            openai_api_key=openai_api_key,
-        )
-        if chapters:
-            await _do_before_return(vid, chapters)
-            return chapters, has_exception
-
-        # Just use the "outline" field if it can be generated in 16k.
-        chapters = await _generate_multi_chapters(
-            vid=vid,
-            trigger=trigger,
-            timed_texts=timed_texts,
-            lang=lang,
-            model=Model.GPT_3_5_TURBO_16K,
-            openai_api_key=openai_api_key,
-        )
-
-        if not chapters:
-            chapters = await _generate_chapters_one_by_one(
+        for model in [Model.GPT_3_5_TURBO, Model.GPT_3_5_TURBO_16K]:
+            chapters = await _generate_multi_chapters(
                 vid=vid,
                 trigger=trigger,
                 timed_texts=timed_texts,
                 lang=lang,
+                model=model,
                 openai_api_key=openai_api_key,
             )
+            if chapters:
+                # `_generate_multi_chapters` returns complete `Chapter`s,
+                # with "summary" filled. No need to `_summarize_chapter`
+                # further.
+                await _do_before_return(vid, chapters)
+                return chapters, has_exception
 
+        # If this succeeds, it will create `chapters` with only the
+        # "chapter" ("outline") field of each Chapter filled
+        # ("summary" ("information") will be empty).
+        # We'll fill "summary" below in this function, in
+        # `_summarize_chapter`.
+        chapters = await _generate_chapters_one_by_one(
+            vid=vid,
+            trigger=trigger,
+            timed_texts=timed_texts,
+            lang=lang,
+            openai_api_key=openai_api_key,
+        )
         if not chapters:
             abort(500, f'summarize failed, no chapters, vid={vid}')
     else:
