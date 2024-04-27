@@ -98,25 +98,25 @@ _GENERATE_MULTI_CHAPTERS_ASSISTANT_MESSAGE_FOR_16K = '''
     "information": "Chef Wang explains the ingredients needed for the dish, including cold cooked rice, eggs, corn, bacon, lapcheong, and shiitake mushrooms.",
     "start": 4,
     "timestamp": "00:00:04"
-   }},
-   {{
+  }},
+  {{
     "outline": "Cooking process",
     "information": "Chef Wang demonstrates the cooking process, including heating up the wok, cooking the egg whites and yolks, adding the mix-ins, and stir-frying the rice.",
     "start": 52,
     "timestamp": "00:00:52"
-   }},
-   {{
+  }},
+  {{
     "outline": "Seasoning",
     "information": "Chef Wang explains the importance of stir-frying until the wok begins to smoke (wok hei) and adding soy sauce and scallions for seasoning.",
     "start": 125,
     "timestamp": "00:02:05"
-   }},
-   {{
+  }},
+  {{
     "outline": "Technical summary",
     "information": "Chef Wang provides some technical tips for making the dish, including changing the mix-ins according to taste, using cold rice, avoiding over-salting, and achieving wok hei.",
     "start": 155,
     "timestamp": "00:02:35"
-   }}
+  }}
 ]
 '''
 
