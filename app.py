@@ -87,6 +87,7 @@ def handle_exception(e: HTTPException):
 async def add_user():
     uid = str(uuid4())
     insert_or_update_user(User(uid=uid))
+    logger.info(f'new user, uid={uid}')
     return {
         'uid': uid,
     }
@@ -133,6 +134,8 @@ async def feedback(vid: str):
 
     _ = _parse_uid_from_headers(request.headers)
 
+    logger.info(f'feedback, vid={vid}, body={body}')
+
     found = find_chapters_by_vid(vid=vid, limit=1)
     if not found:
         return {}
@@ -176,6 +179,13 @@ async def summarize(vid: str):
     no_transcript_rds_key = build_no_transcript_rds_key(vid)
     summarizing_rds_key = build_summarizing_rds_key(vid)
     channel = build_summary_channel(vid)
+
+    trigger = uid
+    logger.info(
+        f'summarize request, '
+        f'vid={vid}, '
+        f'len(chapters)={len(chapters)}, '
+        f'trigger={trigger}')
 
     found = find_chapters_by_vid(vid)
     if found:

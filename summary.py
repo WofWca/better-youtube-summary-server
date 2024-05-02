@@ -159,6 +159,7 @@ async def summarize(
         f'vid={vid}, '
         f'len(chapters)={len(chapters)}, '
         f'len(timed_texts)={len(timed_texts)}, '
+        f'trigger={trigger}, '
         f'lang={lang}')
 
     has_exception = False
